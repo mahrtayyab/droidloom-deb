@@ -1,7 +1,6 @@
 {
   "schema_version": 1,
-  "candidate_tag": "v0.1.0-49-deb.1",
-  "publication_status": "staged-locally-not-published",
+  "tag": "v0.1.0-49-deb.1",
   "target": {
     "distribution": "Ubuntu 26.04",
     "architecture": "amd64"
@@ -45,5 +44,5 @@
     "Compatibility fixes are applied separately by the source installer.",
     "Fresh-machine installation and upgrade/removal paths are not end-to-end validated."
   ],
-  "public_release_gate": "Complete corresponding-source availability and notices must be reviewed before public binary publication."
+  "source_document": "releases/v0.1.0-49-deb.1/SOURCES.md"
 }

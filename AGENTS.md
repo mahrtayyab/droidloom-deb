@@ -16,5 +16,5 @@
 - A rootless binary-repack recipe exists; a complete Debian port/source-build
   package does not. Do not claim the rebuilt archive reproduces the historical
   package checksum. Keep the historical release asset unchanged and outside Git.
-- Release metadata describes a local candidate, not a published GitHub release.
+- Keep release metadata factual; do not claim an upload without verifying it.
   Review corresponding-source obligations before any public binary publication.

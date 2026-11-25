@@ -50,7 +50,12 @@ class ReleaseMetadataTests(unittest.TestCase):
 
     def test_historical_release_asset_agrees_with_installer_pin(self):
         artifact = self.provenance["artifact"]
-        self.assertEqual(self.provenance["candidate_tag"], TAG)
+        pin = self.upstream["local_runtime_package"]
+        self.assertEqual(
+            artifact["name"],
+            f"{pin['name']}_{pin['version']}_{pin['architecture']}.deb",
+        )
+        self.assertEqual(self.provenance["tag"], TAG)
         self.assertEqual(
             artifact["sha256"], self.upstream["local_runtime_package"]["sha256"]
         )
@@ -118,7 +123,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         patterns = (ROOT / ".gitignore").read_text().splitlines()
         self.assertIn("dist/", patterns)
         self.assertIn("*.deb", patterns)
-        for name in ["RELEASE_NOTES.md", "SOURCE_REQUIREMENTS.md", "PROVENANCE.json"]:
+        for name in ["RELEASE_NOTES.md", "SOURCES.md", "PROVENANCE.json"]:
             self.assertTrue((CANDIDATE / name).is_file())
 
     def test_optional_local_release_asset_matches_its_declared_bytes(self):
