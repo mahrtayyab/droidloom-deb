@@ -1,0 +1,35 @@
+# Python and editor state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.idea/
+.vscode/
+
+# Private data and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+cell.json
+
+# Checkouts, dependencies, build outputs, and runtime data
+.work/
+target/
+dist/
+build/
+*.deb
+*.ddeb
+*.pkg.tar.*
+*.apk
+*.apks
+*.apkm
+*.xapk
+*.img
+*.raw
+*.qcow2
+*.log

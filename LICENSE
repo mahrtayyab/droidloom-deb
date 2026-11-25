@@ -1,0 +1,20 @@
+Droidloom-deb compatibility tooling and documentation
+Copyright (C) 2026 droidloom-deb contributors
+
+Droidloom-derived changes retain their upstream attribution:
+Droidloom, Copyright (C) 2026 Doctor Logix.
+
+This project's original code and documentation are free software: you may
+redistribute them and/or modify them under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This project is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The complete license text is in LICENSES/GPL-3.0-or-later.txt.
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Third-party works retain their own licenses and copyright notices. See
+THIRD_PARTY.md and the retained upstream notices in LICENSES/.

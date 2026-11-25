@@ -1,0 +1,57 @@
+name: Check compatibility sources
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  helper:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run isolated helper and release-metadata tests
+        run: python3 -m unittest -v test_ubuntu_kernel_config.py test_release_metadata.py
+      - name: Check CLI without touching the runtime
+        run: python3 ubuntu_kernel_config.py --help
+
+  installer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check shell entry point
+        run: |
+          sh -n install.sh
+          sh install.sh --help
+      - name: Test the installer without installing anything
+        run: cargo test --locked -j 1 --manifest-path tools/installer/Cargo.toml
+      - name: Check installer formatting
+        run: cargo fmt --check --manifest-path tools/installer/Cargo.toml
+
+  titlebar-patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: denialwm/droidloom
+          ref: 572e1c51c5caf75183efe25ad811f98c1268bf56
+          path: .work/droidloom
+          persist-credentials: false
+      - name: Check patch against pinned upstream source
+        run: git -C .work/droidloom apply --check ../../patches/0001-wayland-client-side-decorations.patch

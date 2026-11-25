@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/denialwm/droidloom.git",
+  "commit": "572e1c51c5caf75183efe25ad811f98c1268bf56",
+  "release": 49,
+  "local_runtime_package": {
+    "name": "droidloom",
+    "version": "0.1.0-49",
+    "architecture": "amd64",
+    "sha256": "a24466c5f305883e8ca50b57d63974719a876d94fe96a3c3c2d7fec5d91766b1"
+  },
+  "packaged_presenter_sha256": "c54fa33c4da86f1938b2395d206389e0dc32df65a334f7319aacec05195c6c08",
+  "original_custom_presenter_sha256": "45801e7f51c71114df2f04b04c25f47ac902ef6cff21d2665f65957917ff8b57",
+  "titlebar_patch_sha256": "dfebde111ffbdeaca2d58348df6b70d091e1a9125fdfc6c07a56d9036af35c19",
+  "private_unshare": {
+    "version": "2.42",
+    "source_url": "https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.tar.xz",
+    "sha256": "3452b260bbaa775d6e749ac3bb22111785003fc1f444970025c8da26dfa758e9"
+  },
+  "patches": [
+    "patches/0001-wayland-client-side-decorations.patch"
+  ]
+}

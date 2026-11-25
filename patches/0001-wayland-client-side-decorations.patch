@@ -1,0 +1,932 @@
+Subject: [PATCH] wayland: add client-side window controls when needed
+Upstream: https://github.com/denialwm/droidloom.git
+Base-commit: 572e1c51c5caf75183efe25ad811f98c1268bf56
+
+Export of the locally tested release-49 presenter changes. Includes the
+new decoration module and locked dependencies; no generated binaries.
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 1300482..83df096 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2,6 +2,22 @@
+ # It is not intended for manual editing.
+ version = 4
+ 
++[[package]]
++name = "ab_glyph"
++version = "0.2.32"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "01c0457472c38ea5bd1c3b5ada5e368271cb550be7a4ca4a0b4634e9913f6cc2"
++dependencies = [
++ "ab_glyph_rasterizer",
++ "owned_ttf_parser",
++]
++
++[[package]]
++name = "ab_glyph_rasterizer"
++version = "0.1.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
++
+ [[package]]
+ name = "adler2"
+ version = "2.0.1"
+@@ -58,6 +74,18 @@ dependencies = [
+  "windows-sys 0.61.2",
+ ]
+ 
++[[package]]
++name = "arrayref"
++version = "0.3.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
++
++[[package]]
++name = "arrayvec"
++version = "0.7.8"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
++
+ [[package]]
+ name = "ash"
+ version = "0.38.0+1.3.281"
+@@ -904,6 +932,7 @@ dependencies = [
+  "gbm",
+  "hex",
+  "libc",
++ "sctk-adwaita",
+  "serde",
+  "serde_json",
+  "smithay-client-toolkit",
+@@ -1372,6 +1401,15 @@ dependencies = [
+  "pin-project-lite",
+ ]
+ 
++[[package]]
++name = "owned_ttf_parser"
++version = "0.25.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "36820e9051aca1014ddc75770aab4d68bc1e9e632f0f5627c4086bc216fb583b"
++dependencies = [
++ "ttf-parser",
++]
++
+ [[package]]
+ name = "parking"
+ version = "2.2.1"
+@@ -1519,6 +1557,19 @@ version = "1.0.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
+ 
++[[package]]
++name = "sctk-adwaita"
++version = "0.11.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1dd3accc0f3f4bbaf2c9e1957a030dc582028130c67660d44c0a0345a22ca69b"
++dependencies = [
++ "ab_glyph",
++ "log",
++ "memmap2",
++ "smithay-client-toolkit",
++ "tiny-skia",
++]
++
+ [[package]]
+ name = "serde"
+ version = "1.0.229"
+@@ -1652,6 +1703,12 @@ version = "1.2.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
+ 
++[[package]]
++name = "strict-num"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6637bab7722d379c8b41ba849228d680cc12d0a45ba1fa2b48f2a30577a06731"
++
+ [[package]]
+ name = "strsim"
+ version = "0.11.1"
+@@ -1724,6 +1781,31 @@ dependencies = [
+  "syn 3.0.2",
+ ]
+ 
++[[package]]
++name = "tiny-skia"
++version = "0.11.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "83d13394d44dae3207b52a326c0c85a8bf87f1541f23b0d143811088497b09ab"
++dependencies = [
++ "arrayref",
++ "arrayvec",
++ "bytemuck",
++ "cfg-if",
++ "log",
++ "tiny-skia-path",
++]
++
++[[package]]
++name = "tiny-skia-path"
++version = "0.11.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9c9e7fc0c2e86a30b117d0462aa261b72b7a99b7ebd7deb3a14ceda95c5bdc93"
++dependencies = [
++ "arrayref",
++ "bytemuck",
++ "strict-num",
++]
++
+ [[package]]
+ name = "tinystr"
+ version = "0.8.3"
+@@ -1795,6 +1877,12 @@ dependencies = [
+  "once_cell",
+ ]
+ 
++[[package]]
++name = "ttf-parser"
++version = "0.25.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
++
+ [[package]]
+ name = "typenum"
+ version = "1.20.1"
+diff --git a/docs/INSTALL.md b/docs/INSTALL.md
+index 4611920..63424b5 100644
+--- a/docs/INSTALL.md
++++ b/docs/INSTALL.md
+@@ -159,6 +159,19 @@ gets 1.25 × DPI. Without it, windows get 230 per unit of scale.
+ 
+ The density persists. Desktop tiling determines the window's available size.
+ 
++### Window controls
++
++Droidloom prefers compositor-provided title bars. On GNOME Wayland, or when a
++compositor requests client-side decorations instead, it draws its own title bar
++with close, minimize and maximize/restore buttons. Drag the title bar to move a
++window, or drag its borders to resize it. Fullscreen windows hide the title bar.
++This does not change GNOME's settings or require a desktop extension.
++
++The title bar is outside Android's content area, so it does not consume Android
++touch coordinates or change app DPI. Standard desktop shortcuts still work:
++on GNOME, **Alt+F4** closes, **Super+H** minimizes and **Alt+Space** opens the
++window menu.
++
+ ## 5. Install an APK
+ 
+ The installation command accepts a **single, standalone APK**. Native x86_64
+diff --git a/graphics/droidloom-wayland/Cargo.toml b/graphics/droidloom-wayland/Cargo.toml
+index 7fa640f..163f915 100644
+--- a/graphics/droidloom-wayland/Cargo.toml
++++ b/graphics/droidloom-wayland/Cargo.toml
+@@ -26,6 +26,7 @@ libc.workspace = true
+ serde = { workspace = true, features = ["derive"] }
+ serde_json.workspace = true
+ smithay-client-toolkit = { workspace = true, features = ["xkbcommon"] }
++sctk-adwaita = "=0.11.0"
+ thiserror.workspace = true
+ wayland-client.workspace = true
+ wayland-scanner = "0.31.10"
+diff --git a/graphics/droidloom-wayland/src/main.rs b/graphics/droidloom-wayland/src/main.rs
+index c1dc7b2..9621412 100644
+--- a/graphics/droidloom-wayland/src/main.rs
++++ b/graphics/droidloom-wayland/src/main.rs
+@@ -5,6 +5,7 @@
+ mod activation;
+ mod clipboard;
+ mod clock;
++mod decorations;
+ mod density;
+ mod fence_wakeup;
+ mod frame_timeline;
+@@ -33,6 +34,7 @@ use std::os::unix::ffi::OsStrExt;
+ use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
+ use std::os::unix::net::{SocketAddr, UnixDatagram};
+ use std::path::{Path, PathBuf};
++use std::sync::Arc;
+ use std::time::{Duration, Instant};
+ 
+ use drm_fourcc::DrmFourcc;
+@@ -55,13 +57,15 @@ use smithay_client_toolkit::output::{OutputHandler, OutputState};
+ use smithay_client_toolkit::presentation_time::{
+     PresentTime, PresentationTimeHandler, PresentationTimeState,
+ };
+-use smithay_client_toolkit::reexports::csd_frame::WindowState;
++use smithay_client_toolkit::reexports::csd_frame::{DecorationsFrame, WindowState};
+ use smithay_client_toolkit::registry::{ProvidesRegistryState, RegistryState};
+ use smithay_client_toolkit::registry_handlers;
+ use smithay_client_toolkit::seat::keyboard::{
+     KeyEvent, KeyboardHandler, Modifiers, RawModifiers, RepeatInfo,
+ };
+-use smithay_client_toolkit::seat::pointer::{PointerEvent, PointerEventKind, PointerHandler};
++use smithay_client_toolkit::seat::pointer::{
++    PointerEvent, PointerEventKind, PointerHandler, ThemeSpec, ThemedPointer,
++};
+ use smithay_client_toolkit::seat::touch::TouchHandler;
+ use smithay_client_toolkit::seat::{Capability, SeatHandler, SeatState};
+ use smithay_client_toolkit::shell::WaylandSurface;
+@@ -143,6 +147,8 @@ enum PresenterError {
+     Syncobj(#[from] droidloom_syncobj::SyncobjError),
+     #[error("GBM failure: {0}")]
+     Gbm(String),
++    #[error("client-side window decorations failed: {0}")]
++    Decorations(String),
+     #[error("the compositor does not advertise linux-dmabuf v4 feedback")]
+     DmabufV4Required,
+     #[error(
+@@ -265,6 +271,7 @@ struct TaskWindow {
+     /// Asks Denial to draw the titlebar. Held here, not by SCTK, so it can be
+     /// destroyed before the toplevel as xdg-decoration requires.
+     decoration: Option<ZxdgToplevelDecorationV1>,
++    client_frame: Option<decorations::Frame>,
+     viewport: Option<WpViewport>,
+     fractional_scale: Option<WpFractionalScaleV1>,
+     sync_surface: Option<WpLinuxDrmSyncobjSurfaceV1>,
+@@ -381,6 +388,7 @@ struct App {
+     dmabuf_state: DmabufState,
+     feedback: Option<DmabufFeedback>,
+     compositor: CompositorState,
++    decoration_globals: decorations::Globals,
+     xdg_shell: XdgShell,
+     insets_manager: Option<insets::DenialInsetsManagerV1>,
+     frame_timeline_manager: Option<frame_timeline::Manager>,
+@@ -406,6 +414,7 @@ struct App {
+     task_work: readiness::Tasks,
+     keyboard: Option<wl_keyboard::WlKeyboard>,
+     pointer: Option<wl_pointer::WlPointer>,
++    themed_pointer: Option<ThemedPointer>,
+     touch: Option<wl_touch::WlTouch>,
+     focused: Option<TaskObjectId>,
+     pointer_contact: Option<Contact>,
+@@ -845,11 +854,10 @@ impl App {
+             (None, None, None, None, None)
+         } else {
+             let surface = self.compositor.create_surface(qh);
+-            // The compositor draws the titlebar that moves the window: the
+-            // whole surface belongs to the Android app. One without
+-            // xdg-decoration leaves the window undecorated. The decoration is
+-            // ours rather than SCTK's: SCTK destroys it only when its last
+-            // Window clone drops, after we have destroyed the toplevel.
++            // Prefer the compositor's titlebar; otherwise draw one on separate
++            // subsurfaces, keeping Android's whole content surface unchanged.
++            // The decoration is ours rather than SCTK's: SCTK destroys it only
++            // when its last Window clone drops, after we destroy the toplevel.
+             let window = self
+                 .xdg_shell
+                 .create_window(surface, WindowDecorations::None, qh);
+@@ -858,7 +866,7 @@ impl App {
+                     .ok()
+                     .map(|manager| {
+                         let decoration =
+-                            manager.get_toplevel_decoration(window.xdg_toplevel(), qh, ());
++                            manager.get_toplevel_decoration(window.xdg_toplevel(), qh, object);
+                         decoration.set_mode(zxdg_toplevel_decoration_v1::Mode::ServerSide);
+                         decoration
+                     });
+@@ -889,6 +897,7 @@ impl App {
+                 sync_surface,
+             )
+         };
++        let needs_client_frame = window.is_some() && decoration.is_none();
+         self.tasks.insert(
+             object,
+             TaskWindow {
+@@ -903,6 +912,7 @@ impl App {
+                 input_route: None,
+                 window,
+                 decoration,
++                client_frame: None,
+                 viewport,
+                 fractional_scale,
+                 sync_surface,
+@@ -934,6 +944,7 @@ impl App {
+                 closing: false,
+             },
+         );
++        self.set_client_decorations(object, needs_client_frame, qh)?;
+         let formats = self.published_formats()?;
+         self.endpoint
+             .as_mut()
+@@ -1011,6 +1022,7 @@ impl App {
+                 || configure.changes_geometry(task.logical_size, task.applied_scale_120)
+                 || task.buffer_size != (buffer_width, buffer_height)
+         };
++        self.configure_client_frame(object, configure.size, scale_120)?;
+         if !needs_configure {
+             return Ok(());
+         }
+@@ -1672,6 +1684,7 @@ impl App {
+         if let Some(mut task) = self.tasks.remove(&object) {
+             task.timeline.stop();
+             // Before the Window drops and SCTK destroys the toplevel.
++            task.client_frame.take();
+             if let Some(decoration) = task.decoration.take() {
+                 decoration.destroy();
+             }
+@@ -1745,6 +1758,7 @@ impl App {
+         // destroy the role explicitly and let the remaining surface/buffer
+         // objects drain independently. xdg-decoration requires the
+         // decoration to go first; Smithay disconnects us otherwise.
++        task.client_frame.take();
+         if let Some(decoration) = task.decoration.take() {
+             decoration.destroy();
+         }
+@@ -2388,7 +2402,11 @@ impl CompositorHandler for App {
+         surface: &wl_surface::WlSurface,
+         _new_factor: i32,
+     ) {
+-        surface.set_buffer_scale(1);
++        // Android roots use fractional scaling via wp_viewporter. Frame and
++        // cursor subsurfaces manage their own integer buffer scale.
++        if self.task_for_surface(surface).is_some() {
++            surface.set_buffer_scale(1);
++        }
+     }
+ 
+     fn transform_changed(
+@@ -2519,6 +2537,10 @@ impl WindowHandler for App {
+         if !task.accepts_present() {
+             return;
+         }
++        if let Some(frame) = task.client_frame.as_mut() {
++            frame.update_state(configure.state);
++            frame.update_wm_capabilities(configure.capabilities);
++        }
+         let suspended = configure.state.contains(WindowState::SUSPENDED);
+         if task.suspended != suspended {
+             let before = task.visibility();
+@@ -2540,19 +2562,27 @@ impl WindowHandler for App {
+         let task = &self.tasks[&object];
+         let package = task.package.clone();
+         let previous = task.resize.logical_size(task.logical_size);
+-        let requested_width = configure.new_size.0.map(NonZeroU32::get);
+-        let requested_height = configure.new_size.1.map(NonZeroU32::get);
++        let borders = task
++            .client_frame
++            .as_ref()
++            .map_or((0, 0), |frame| frame.add_borders(0, 0));
++        let requested_width =
++            decorations::content_dimension(configure.new_size.0.map(NonZeroU32::get), borders.0);
++        let requested_height =
++            decorations::content_dimension(configure.new_size.1.map(NonZeroU32::get), borders.1);
+         let size = previous.map_or_else(
+             || {
+                 let bounds = configure
+                     .suggested_bounds
+-                    .and_then(|(width, height)| LogicalSize::new(width, height).ok());
++                    .and_then(|(width, height)| LogicalSize::new(width, height).ok())
++                    .map(|bounds| decorations::content_bounds(bounds, borders));
+                 self.window_policy.resolve_initial(
+                     &package,
+                     requested_width,
+                     requested_height,
+                     bounds,
+-                    self.host_logical_canvas_size(),
++                    self.host_logical_canvas_size()
++                        .map(|bounds| decorations::content_bounds(bounds, borders)),
+                 )
+             },
+             |previous| LogicalSize {
+@@ -2974,10 +3004,18 @@ impl SeatHandler for App {
+                 .map_err(|error| error.to_string()),
+             Capability::Pointer if self.pointer.is_none() => self
+                 .seat_state
+-                .get_pointer(qh, &seat)
+-                .map(|pointer| {
++                .get_pointer_with_theme(
++                    qh,
++                    &seat,
++                    self.decoration_globals.shm.wl_shm(),
++                    self.compositor.create_surface(qh),
++                    ThemeSpec::default(),
++                )
++                .map(|themed_pointer| {
++                    let pointer = themed_pointer.pointer().clone();
+                     self.input_timestamps.pointer(&pointer, qh);
+                     self.pointer = Some(pointer);
++                    self.themed_pointer = Some(themed_pointer);
+                 })
+                 .map_err(|error| error.to_string()),
+             Capability::Touch if self.touch.is_none() => self
+@@ -3028,6 +3066,7 @@ impl SeatHandler for App {
+                 self.retire_contacts(None);
+                 self.input_timestamps.remove(input_time::Device::Pointer);
+                 self.pointer = None;
++                self.themed_pointer = None;
+             }
+             Capability::Touch
+                 if self
+@@ -3206,12 +3245,12 @@ impl KeyboardHandler for App {
+ impl PointerHandler for App {
+     fn pointer_frame(
+         &mut self,
+-        _conn: &Connection,
+-        _qh: &QueueHandle<Self>,
+-        _pointer: &wl_pointer::WlPointer,
++        conn: &Connection,
++        qh: &QueueHandle<Self>,
++        pointer: &wl_pointer::WlPointer,
+         events: &[PointerEvent],
+     ) {
+-        if self.pointer.as_ref() != Some(_pointer) {
++        if self.pointer.as_ref() != Some(pointer) {
+             return;
+         }
+         // A frame's axis events are one scroll: its fields repeat one motion.
+@@ -3219,9 +3258,12 @@ impl PointerHandler for App {
+         let (mut vertical, mut horizontal) = (scroll::Axis::default(), scroll::Axis::default());
+         let mut scroll_time = 0;
+         for event in events {
++            if self.decoration_pointer_event(conn, qh, pointer, event) {
++                continue;
++            }
+             if let PointerEventKind::Press { serial, .. } = event.kind
+                 && let Some(data) =
+-                    _pointer.data::<smithay_client_toolkit::seat::pointer::PointerData>()
++                    pointer.data::<smithay_client_toolkit::seat::pointer::PointerData>()
+             {
+                 self.activation.input(serial, data.seat(), &event.surface);
+             }
+@@ -3460,6 +3502,8 @@ impl ProvidesRegistryState for App {
+ }
+ 
+ smithay_client_toolkit::delegate_compositor!(App);
++smithay_client_toolkit::delegate_subcompositor!(App);
++smithay_client_toolkit::delegate_shm!(App);
+ smithay_client_toolkit::delegate_output!(App);
+ smithay_client_toolkit::delegate_xdg_shell!(App);
+ smithay_client_toolkit::delegate_xdg_window!(App);
+@@ -3480,7 +3524,6 @@ wayland_client::delegate_noop!(App: ignore WpViewport);
+ wayland_client::delegate_noop!(App: ignore ZwlrOutputPowerManagerV1);
+ wayland_client::delegate_noop!(App: ignore ZwpIdleInhibitManagerV1);
+ wayland_client::delegate_noop!(App: ignore ZwpIdleInhibitorV1);
+-wayland_client::delegate_noop!(App: ignore ZxdgToplevelDecorationV1);
+ 
+ fn main() {
+     eprintln!("DROIDLOOM_DIRECT_INPUT_ABI=1;");
+@@ -3580,6 +3623,8 @@ fn run() -> Result<(), PresenterError> {
+             "Droidloom: the compositor has no output power control; Android gets no display power hint"
+         );
+     }
++    let decoration_globals =
++        decorations::Globals::bind(Arc::new(compositor.clone()), &globals, &qh)?;
+     let mut app = App {
+         activation: activation::Activation::new(&globals, &qh, host_grants),
+         layer_globals: layers::Globals {
+@@ -3610,6 +3655,7 @@ fn run() -> Result<(), PresenterError> {
+         dmabuf_state,
+         feedback: None,
+         compositor,
++        decoration_globals,
+         xdg_shell,
+         insets_manager: globals.bind(&qh, 1..=1, ()).ok(),
+         frame_timeline_manager: globals.bind(&qh, 1..=1, ()).ok(),
+@@ -3631,6 +3677,7 @@ fn run() -> Result<(), PresenterError> {
+         task_work: readiness::Tasks::default(),
+         keyboard: None,
+         pointer: None,
++        themed_pointer: None,
+         touch: None,
+         focused: None,
+         pointer_contact: None,
+@@ -3690,6 +3737,7 @@ fn run_presenter_loop(
+         }
+         app.unmap_requested_tasks()?;
+         app.release_ready_frames()?;
++        app.draw_client_frames();
+         poll_sources(
+             conn,
+             &mut event_queue,
+diff --git a/graphics/droidloom-wayland/src/decorations.rs b/graphics/droidloom-wayland/src/decorations.rs
+new file mode 100644
+index 0000000..1c1edf1
+--- /dev/null
++++ b/graphics/droidloom-wayland/src/decorations.rs
+@@ -0,0 +1,425 @@
++//! Client-side title bars when the compositor cannot provide decorations.
++//!
++//! Frames are separate SHM subsurfaces. Android keeps its original content
++//! origin and direct GPU buffers; clicks on the frame never become Android
++//! touch events. Compositors offering server-side decorations keep that path.
++
++use super::{App, FRACTIONAL_SCALE_DENOMINATOR, PresenterError, TaskObjectId, readiness};
++use droidloom_window_policy::LogicalSize;
++use sctk_adwaita::{AdwaitaFrame, FrameConfig};
++use smithay_client_toolkit::compositor::CompositorState;
++use smithay_client_toolkit::reexports::csd_frame::{
++    DecorationsFrame, FrameAction, FrameClick, ResizeEdge,
++};
++use smithay_client_toolkit::seat::pointer::{
++    CursorIcon, PointerData, PointerEvent, PointerEventKind,
++};
++use smithay_client_toolkit::shell::WaylandSurface;
++use smithay_client_toolkit::shell::xdg::XdgSurface;
++use smithay_client_toolkit::shell::xdg::window::{Window, WindowHandler};
++use smithay_client_toolkit::shm::{Shm, ShmHandler};
++use smithay_client_toolkit::subcompositor::SubcompositorState;
++use std::{num::NonZeroU32, sync::Arc, time::Duration};
++use wayland_client::globals::GlobalList;
++use wayland_client::protocol::wl_pointer;
++use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, WEnum};
++use wayland_protocols::xdg::decoration::zv1::client::zxdg_toplevel_decoration_v1::{
++    self, ZxdgToplevelDecorationV1,
++};
++use wayland_protocols::xdg::shell::client::xdg_toplevel::ResizeEdge as XdgResizeEdge;
++
++pub(super) type Frame = AdwaitaFrame<App>;
++
++pub(super) struct Globals {
++    pub shm: Shm,
++    compositor: Arc<CompositorState>,
++    subcompositor: Arc<SubcompositorState>,
++}
++
++impl Globals {
++    pub fn bind(
++        compositor: Arc<CompositorState>,
++        globals: &GlobalList,
++        qh: &QueueHandle<App>,
++    ) -> Result<Self, PresenterError> {
++        Ok(Self {
++            shm: Shm::bind(globals, qh)?,
++            subcompositor: Arc::new(SubcompositorState::bind(
++                compositor.wl_compositor().clone(),
++                globals,
++                qh,
++            )?),
++            compositor,
++        })
++    }
++
++    fn frame(
++        &self,
++        window: &Window,
++        title: String,
++        qh: &QueueHandle<App>,
++    ) -> Result<Frame, PresenterError> {
++        let mut frame = Frame::new(
++            window,
++            &self.shm,
++            self.compositor.clone(),
++            self.subcompositor.clone(),
++            qh.clone(),
++            FrameConfig::auto(),
++        )
++        .map_err(|error| PresenterError::Decorations(error.to_string()))?;
++        frame.set_title(title);
++        Ok(frame)
++    }
++}
++
++/// XDG configures describe the outside of the window; Android sizes describe
++/// only its content. An unspecified axis must stay unspecified, not shrink
++/// again on activation-only configures. Undersized suggestions stay nonzero.
++pub(super) fn content_dimension(outer: Option<u32>, extra: u32) -> Option<u32> {
++    outer.map(|outer| outer.saturating_sub(extra).max(1))
++}
++
++pub(super) fn content_bounds(outer: LogicalSize, extra: (u32, u32)) -> LogicalSize {
++    LogicalSize {
++        width: outer.width.saturating_sub(extra.0).max(1),
++        height: outer.height.saturating_sub(extra.1).max(1),
++    }
++}
++
++fn resize_edge(edge: ResizeEdge) -> Option<XdgResizeEdge> {
++    Some(match edge {
++        ResizeEdge::Top => XdgResizeEdge::Top,
++        ResizeEdge::Bottom => XdgResizeEdge::Bottom,
++        ResizeEdge::Left => XdgResizeEdge::Left,
++        ResizeEdge::TopLeft => XdgResizeEdge::TopLeft,
++        ResizeEdge::BottomLeft => XdgResizeEdge::BottomLeft,
++        ResizeEdge::Right => XdgResizeEdge::Right,
++        ResizeEdge::TopRight => XdgResizeEdge::TopRight,
++        ResizeEdge::BottomRight => XdgResizeEdge::BottomRight,
++        _ => return None,
++    })
++}
++
++impl App {
++    pub(super) fn set_client_decorations(
++        &mut self,
++        object: TaskObjectId,
++        enabled: bool,
++        qh: &QueueHandle<Self>,
++    ) -> Result<(), PresenterError> {
++        let Some(task) = self.tasks.get_mut(&object) else {
++            return Ok(());
++        };
++        if !task.accepts_present() || enabled == task.client_frame.is_some() {
++            return Ok(());
++        }
++        let window = task.window.as_ref().expect("visible task has a window");
++        if enabled {
++            task.client_frame = Some(self.decoration_globals.frame(
++                window,
++                self.titles.title(&task.package),
++                qh,
++            )?);
++        } else {
++            // Destroy child surfaces before the toplevel, as on task teardown.
++            task.client_frame.take();
++        }
++        let minimum = task
++            .client_frame
++            .as_ref()
++            .map_or((1, 1), |frame| frame.add_borders(120, 1));
++        window.set_min_size(Some(minimum));
++        if let Some((width, height)) = task.logical_size {
++            task.resize.configure(LogicalSize { width, height }, false);
++            self.task_work.mark(object, readiness::RESIZE);
++        }
++        eprintln!(
++            "Droidloom window controls: {} for {}",
++            if enabled {
++                "client-side"
++            } else {
++                "server-side"
++            },
++            task.package
++        );
++        Ok(())
++    }
++
++    pub(super) fn configure_client_frame(
++        &mut self,
++        object: TaskObjectId,
++        size: LogicalSize,
++        scale_120: u32,
++    ) -> Result<(), PresenterError> {
++        let task = self
++            .tasks
++            .get_mut(&object)
++            .ok_or(PresenterError::UnknownTask(object))?;
++        let Some(window) = task.window.as_ref() else {
++            return Ok(());
++        };
++        let (location, outside) = if let Some(frame) = task.client_frame.as_mut() {
++            frame
++                .set_scaling_factor(f64::from(scale_120) / f64::from(FRACTIONAL_SCALE_DENOMINATOR));
++            frame.resize(
++                NonZeroU32::new(size.width)
++                    .ok_or(PresenterError::Configuration("zero frame width"))?,
++                NonZeroU32::new(size.height)
++                    .ok_or(PresenterError::Configuration("zero frame height"))?,
++            );
++            (frame.location(), frame.add_borders(size.width, size.height))
++        } else {
++            ((0, 0), (size.width, size.height))
++        };
++        window.xdg_surface().set_window_geometry(
++            location.0,
++            location.1,
++            i32::try_from(outside.0)
++                .map_err(|_| PresenterError::Configuration("decorated window is too wide"))?,
++            i32::try_from(outside.1)
++                .map_err(|_| PresenterError::Configuration("decorated window is too tall"))?,
++        );
++        Ok(())
++    }
++
++    pub(super) fn draw_client_frames(&mut self) {
++        for task in self.tasks.values_mut() {
++            if !task.accepts_present() || task.logical_size.is_none() {
++                continue;
++            }
++            if let Some(frame) = task.client_frame.as_mut()
++                && frame.is_dirty()
++                && !frame.is_hidden()
++                && frame.draw()
++                && let Some(window) = task.window.as_ref()
++            {
++                // Resize/scale updates synchronize the children with the
++                // parent's viewport and XDG geometry. Hover-only updates are
++                // desynchronized and do not drive Android's rendering loop.
++                window.commit();
++            }
++        }
++    }
++
++    fn frame_cursor(&self, conn: &Connection, cursor: CursorIcon) {
++        if let Some(pointer) = self.themed_pointer.as_ref() {
++            let _ = pointer.set_cursor(conn, cursor);
++        }
++    }
++
++    /// Returns true only for decoration surfaces, consuming all their input.
++    pub(super) fn decoration_pointer_event(
++        &mut self,
++        conn: &Connection,
++        qh: &QueueHandle<Self>,
++        pointer: &wl_pointer::WlPointer,
++        event: &PointerEvent,
++    ) -> bool {
++        let time = match event.kind {
++            PointerEventKind::Motion { time }
++            | PointerEventKind::Press { time, .. }
++            | PointerEventKind::Release { time, .. }
++            | PointerEventKind::Axis { time, .. } => Duration::from_millis(u64::from(time)),
++            _ => Duration::ZERO,
++        };
++        let hit = self.tasks.iter_mut().find_map(|(object, task)| {
++            let frame = task.client_frame.as_mut()?;
++            let cursor = frame.click_point_moved(
++                time,
++                &event.surface.id(),
++                event.position.0,
++                event.position.1,
++            )?;
++            let action = match event.kind {
++                PointerEventKind::Leave { .. } => {
++                    frame.click_point_left();
++                    None
++                }
++                PointerEventKind::Press { button, .. }
++                | PointerEventKind::Release { button, .. } => {
++                    let click = match button {
++                        0x110 => Some(FrameClick::Normal),
++                        0x111 => Some(FrameClick::Alternate),
++                        _ => None,
++                    };
++                    click.and_then(|click| {
++                        frame.on_click(
++                            time,
++                            click,
++                            matches!(event.kind, PointerEventKind::Press { .. }),
++                        )
++                    })
++                }
++                _ => None,
++            };
++            Some((*object, cursor, action))
++        });
++        let Some((object, cursor, action)) = hit else {
++            if matches!(event.kind, PointerEventKind::Enter { .. }) {
++                self.frame_cursor(conn, CursorIcon::Default);
++            }
++            return false;
++        };
++        if matches!(
++            event.kind,
++            PointerEventKind::Enter { .. } | PointerEventKind::Motion { .. }
++        ) {
++            self.frame_cursor(conn, cursor);
++        }
++        if let PointerEventKind::Press { serial, .. } = event.kind
++            && let Some(data) = pointer.data::<PointerData>()
++            && let Some(window) = self.tasks[&object].window.as_ref()
++        {
++            self.activation
++                .input(serial, data.seat(), window.wl_surface());
++            self.clipboard.serial(serial);
++        }
++        if let Some(action) = action {
++            let (PointerEventKind::Press { serial, .. } | PointerEventKind::Release { serial, .. }) =
++                event.kind
++            else {
++                return true;
++            };
++            let Some(window) = self.tasks[&object].window.clone() else {
++                return true;
++            };
++            let Some(data) = pointer.data::<PointerData>() else {
++                return true;
++            };
++            match action {
++                // Use exactly the same task-close transaction as Alt+F4.
++                FrameAction::Close => self.request_close(conn, qh, &window),
++                FrameAction::Minimize => window.set_minimized(),
++                FrameAction::Maximize => window.set_maximized(),
++                FrameAction::UnMaximize => window.unset_maximized(),
++                FrameAction::Move => window.move_(data.seat(), serial),
++                FrameAction::Resize(edge) => {
++                    if let Some(edge) = resize_edge(edge) {
++                        window.resize(data.seat(), serial, edge);
++                    }
++                }
++                FrameAction::ShowMenu(x, y) => {
++                    window.show_window_menu(data.seat(), serial, (x, y));
++                }
++                _ => {}
++            }
++        }
++        true
++    }
++}
++
++impl ShmHandler for App {
++    fn shm_state(&mut self) -> &mut Shm {
++        &mut self.decoration_globals.shm
++    }
++}
++
++impl Dispatch<ZxdgToplevelDecorationV1, TaskObjectId> for App {
++    fn event(
++        state: &mut Self,
++        _proxy: &ZxdgToplevelDecorationV1,
++        event: zxdg_toplevel_decoration_v1::Event,
++        object: &TaskObjectId,
++        _conn: &Connection,
++        qh: &QueueHandle<Self>,
++    ) {
++        let zxdg_toplevel_decoration_v1::Event::Configure {
++            mode: WEnum::Value(mode),
++        } = event
++        else {
++            return;
++        };
++        if let Err(error) = state.set_client_decorations(
++            *object,
++            mode == zxdg_toplevel_decoration_v1::Mode::ClientSide,
++            qh,
++        ) {
++            state.fail(&error);
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn undecorated_and_fullscreen_sizes_are_unchanged() {
++        assert_eq!(content_dimension(Some(640), 0), Some(640));
++        assert_eq!(
++            content_bounds(
++                LogicalSize {
++                    width: 640,
++                    height: 480
++                },
++                (0, 0)
++            ),
++            LogicalSize {
++                width: 640,
++                height: 480
++            }
++        );
++    }
++
++    #[test]
++    fn titlebar_is_not_included_in_android_content_size() {
++        assert_eq!(content_dimension(Some(480), 35), Some(445));
++        assert_eq!(
++            content_bounds(
++                LogicalSize {
++                    width: 1920,
++                    height: 1080
++                },
++                (0, 35)
++            ),
++            LogicalSize {
++                width: 1920,
++                height: 1045
++            }
++        );
++    }
++
++    #[test]
++    fn activation_only_configures_do_not_shrink_content_again() {
++        assert_eq!(content_dimension(None, 35), None);
++        assert_eq!(content_dimension(Some(640), 0), Some(640));
++    }
++
++    #[test]
++    fn tiny_suggestions_never_create_zero_sized_buffers() {
++        for size in [0, 1, 20, 35] {
++            assert_eq!(content_dimension(Some(size), 35), Some(1));
++        }
++        assert_eq!(
++            content_bounds(
++                LogicalSize {
++                    width: 1,
++                    height: 1
++                },
++                (8, 35)
++            ),
++            LogicalSize {
++                width: 1,
++                height: 1
++            }
++        );
++    }
++
++    #[test]
++    fn all_resize_edges_map_to_the_matching_xdg_request() {
++        for (edge, expected) in [
++            (ResizeEdge::Top, XdgResizeEdge::Top),
++            (ResizeEdge::Bottom, XdgResizeEdge::Bottom),
++            (ResizeEdge::Left, XdgResizeEdge::Left),
++            (ResizeEdge::TopLeft, XdgResizeEdge::TopLeft),
++            (ResizeEdge::BottomLeft, XdgResizeEdge::BottomLeft),
++            (ResizeEdge::Right, XdgResizeEdge::Right),
++            (ResizeEdge::TopRight, XdgResizeEdge::TopRight),
++            (ResizeEdge::BottomRight, XdgResizeEdge::BottomRight),
++        ] {
++            assert_eq!(resize_edge(edge), Some(expected));
++        }
++        assert_eq!(resize_edge(ResizeEdge::None), None);
++    }
++}

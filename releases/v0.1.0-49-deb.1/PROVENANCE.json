@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "candidate_tag": "v0.1.0-49-deb.1",
+  "publication_status": "staged-locally-not-published",
+  "target": {
+    "distribution": "Ubuntu 26.04",
+    "architecture": "amd64"
+  },
+  "artifact": {
+    "name": "droidloom_0.1.0-49_amd64.deb",
+    "bytes": 1025174170,
+    "sha256": "a24466c5f305883e8ca50b57d63974719a876d94fe96a3c3c2d7fec5d91766b1",
+    "kind": "historical-unmodified-runtime-binary-repack",
+    "contains_compatibility_fixes": false,
+    "compatibility_installer": "install.sh"
+  },
+  "upstream": {
+    "repository": "https://github.com/denialwm/droidloom.git",
+    "commit": "572e1c51c5caf75183efe25ad811f98c1268bf56",
+    "release": 49,
+    "input_manifest": "packaging/inputs-49.json",
+    "input_checksums": "packaging/upstream-49.sha256"
+  },
+  "payload_audit": {
+    "regular_files": 660,
+    "symlinks": {
+      "usr/lib/droidloom/current": "runtime"
+    },
+    "all_data_paths_under": "usr/",
+    "root_ownership": true,
+    "setuid_setgid_members": false,
+    "control_members": [
+      "control"
+    ],
+    "regular_file_bytes_match_upstream_usr_merge": true,
+    "omitted_upstream_paths": [
+      "usr/share/libalpm/hooks/60-droidloom-remove.hook",
+      "usr/share/libalpm/hooks/60-droidloom-upgrade.hook",
+      "usr/share/libalpm/hooks/90-droidloom-installed.hook"
+    ]
+  },
+  "limitations": [
+    "Not a complete policy-compliant Debian port.",
+    "Bit-for-bit reproduction of the historical archive is not claimed.",
+    "Compatibility fixes are applied separately by the source installer.",
+    "Fresh-machine installation and upgrade/removal paths are not end-to-end validated."
+  ],
+  "public_release_gate": "Complete corresponding-source availability and notices must be reviewed before public binary publication."
+}

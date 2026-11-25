@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "validation_date": "2026-11-25",
+  "host_distribution": "Ubuntu 26.04.1 LTS",
+  "architecture": "amd64",
+  "tools": {
+    "dpkg_deb": "1.23.7",
+    "gnu_tar": "1.35",
+    "zstd": "1.5.7"
+  },
+  "source_date_epoch": 1795184526,
+  "rootless_repack_test": "passed",
+  "upstream_inputs_verified": 3,
+  "regular_payload_files_verified": 660,
+  "staging_control_matches_reference": true,
+  "rebuilt_sha256": "b58b9ac69c74c19e11ec58cca6b5295abefe3f6c5076516424c2cef0eeda7d07",
+  "rebuilt_bytes": 1030581948,
+  "historical_archive_unchanged": true,
+  "historical_archive_bit_for_bit_reproduction": false,
+  "installation_performed": false,
+  "temporary_workspace_removed": true,
+  "notes": "The verification rebuild was not retained as the historical release asset. All 660 extracted regular payload files matched the audited historical staging tree."
+}

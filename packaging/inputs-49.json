@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "architecture": "x86_64",
+  "version": "0.1.0-49",
+  "upstream_repository": "https://github.com/denialwm/droidloom.git",
+  "upstream_commit": "572e1c51c5caf75183efe25ad811f98c1268bf56",
+  "upstream_release_tag": "packages",
+  "source_date_epoch": 1795184526,
+  "inputs": [
+    {
+      "component": "base",
+      "name": "droidloom-base-0.1.0-49-x86_64.pkg.tar.zst",
+      "bytes": 938790178,
+      "sha256": "aa313d072f8935c6c56732a7440a2d7bab8eb797540e30e07411ca91b95f726e",
+      "url": "https://github.com/denialwm/droidloom/releases/download/packages/droidloom-base-0.1.0-49-x86_64.pkg.tar.zst"
+    },
+    {
+      "component": "image",
+      "name": "droidloom-image-0.1.0-49-x86_64.pkg.tar.zst",
+      "bytes": 74214227,
+      "sha256": "a6dcc49e87727262a6b249bd7ad0ed140d1149250b983f351d151e5bdafaf69f",
+      "url": "https://github.com/denialwm/droidloom/releases/download/packages/droidloom-image-0.1.0-49-x86_64.pkg.tar.zst"
+    },
+    {
+      "component": "runtime",
+      "name": "droidloom-runtime-0.1.0-49-x86_64.pkg.tar.zst",
+      "bytes": 12400482,
+      "sha256": "a50a30fc664f1284556d1ced51a386441ab2b4c2177ae581285a0eb002a4684c",
+      "url": "https://github.com/denialwm/droidloom/releases/download/packages/droidloom-runtime-0.1.0-49-x86_64.pkg.tar.zst"
+    }
+  ]
+}
