@@ -1,5 +1,5 @@
 import copy
-from contextlib import redirect_stdout
+from contextlib import ExitStack, redirect_stdout
 import gzip
 import io
 import json
@@ -165,7 +165,10 @@ class FileTests(unittest.TestCase):
 
 class InstallTests(unittest.TestCase):
     def setUp(self):
-        self.enterContext(redirect_stdout(io.StringIO()))
+        # TestCase.enterContext() is unavailable on supported Python 3.10.
+        contexts = ExitStack()
+        self.addCleanup(contexts.close)
+        contexts.enter_context(redirect_stdout(io.StringIO()))
         self.temporary = tempfile.TemporaryDirectory(dir=TEMP_ROOT)
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
