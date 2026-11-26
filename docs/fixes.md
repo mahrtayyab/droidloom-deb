@@ -3,6 +3,57 @@
 All fixes target upstream release 49, pinned in [upstream.json](../upstream.json).
 Use [the installer](install.md) to apply them together.
 
+## Binderfs startup after reboot
+
+If `droidloomctl start` reports that the Android cell is not running and the
+daemon logs show `mount .../dev/binderfs ... No such device`, the stock Binder
+driver may not be loaded. On the tested Ubuntu kernel, Binder is a loadable
+module; loading it once does not persist across reboots.
+
+Read-only checks:
+
+```sh
+grep -w binder /proc/filesystems
+modinfo -F filename binder_linux
+modprobe --show-depends binder_linux
+```
+
+The filesystem type is `binder`; `/dev/binderfs` is Android's mountpoint.
+No `binder` entry is expected while the module is unloaded.
+
+Run `./install.sh --check`, then `./install.sh` to apply the fix. The installer
+checks the running kernel's Binder/Binderfs configuration and matching module
+files. For a loadable driver it installs
+[`examples/binder.conf`](../examples/binder.conf) as
+`/etc/systemd/system/droidloomd.service.d/binder.conf`:
+
+```ini
+[Service]
+ExecStartPre=/usr/sbin/modprobe binder_linux
+```
+
+This loads the stock driver before Droidloom creates Android's namespaces.
+The precheck is added even if the module is already loaded, preventing the same
+failure after reboot. Registered, built-in Binder support needs no new drop-in.
+An existing identical drop-in is reused; edited/conflicting files are refused.
+
+**Caution:** loading a module affects the running host kernel and requires
+administrator approval. Only the existing distribution module is used—no
+replacement driver, kernel rebuild, force-loading, or security-policy changes.
+Missing/mismatched modules, unsupported kernel layouts, and modprobe
+blacklist/install rules require manual review. The installer never disables
+Secure Boot, AppArmor, signature enforcement, or the kernel's module-loading lock.
+If module loading is locked down, arrange the normal OS load before that lock.
+The precheck explicitly requests this module: review/remove it if you later
+change module-loading policy, rather than assuming a blacklist alone disables it.
+
+`--check` never loads a driver or changes services. `--no-start` installs the
+precheck but leaves loading until Droidloom starts. This does not enable
+automatic login startup or change global module-loading configuration.
+If the on-disk precheck is not effective, reload definitions with
+`sudo systemctl daemon-reload` and inspect
+`systemctl show droidloomd.service -p ExecStartPre` for conflicting resets.
+
 ## Kernel-config boot crash
 
 Android's `Debug.isVmapStack()` aborts `system_server` if `/proc/config.gz` is
@@ -68,6 +119,21 @@ droidloomctl stop
 ```
 
 Undo only the fix you intend to remove.
+
+### Binder startup precheck
+
+Remove only the unchanged project drop-in:
+
+```sh
+if cmp examples/binder.conf /etc/systemd/system/droidloomd.service.d/binder.conf; then
+  sudo rm -- /etc/systemd/system/droidloomd.service.d/binder.conf
+  sudo systemctl daemon-reload
+fi
+```
+
+This does not unload the driver. Do not use `rmmod` or `modprobe -r` while any
+Android runtime is using Binder. Without the precheck, the failure can return
+after reboot; unrelated drop-ins and global module settings should be left alone.
 
 ### Kernel-config workaround
 

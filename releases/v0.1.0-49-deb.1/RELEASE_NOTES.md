@@ -7,7 +7,8 @@ Unofficial Debian-format package for **Ubuntu 26.04 amd64 (x86_64), Wayland**.
 - [Installation instructions](https://github.com/mahrtayyab/droidloom-deb/blob/main/docs/install.md)
 
 The `.deb` contains the base runtime. The repository's `install.sh` applies the
-kernel-config, window-control, and private namespace-tool fixes separately:
+Binder startup, kernel-config, window-control, and private namespace-tool fixes
+separately:
 
 ```sh
 ./install.sh --check --runtime-deb "/path/to/droidloom_0.1.0-49_amd64.deb"

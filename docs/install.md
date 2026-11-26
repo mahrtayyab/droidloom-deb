@@ -6,12 +6,14 @@
 - Python 3.10+, Cargo/Rust 1.85+, and Rustup.
 - At least 20 GiB for the runtime, plus room for build files.
 - The running kernel's `/boot/config-$(uname -r)` and administrator access.
+- Binder IPC and Binderfs support, built in or provided by the matching stock
+  `binder_linux` module for that kernel.
 
 Install missing build dependencies only after reviewing apt's proposed changes:
 
 ```sh
 sudo apt-get install --no-remove --no-install-recommends \
-  build-essential pkg-config git curl xz-utils erofs-utils \
+  build-essential pkg-config git curl xz-utils erofs-utils kmod \
   libdrm-dev libgbm-dev libwayland-dev libxkbcommon-dev libffi-dev
 ```
 
@@ -58,6 +60,9 @@ The installer verifies versions and hashes, builds/tests missing components as
 your user, then stops only Droidloom to activate the fixes. It uses apt for a
 fresh runtime installation, whose dependency changes need your approval.
 Existing verified fixes are skipped; conflicting or edited overrides are refused.
+For loadable Binder support, it adds a Droidloom-only startup precheck; the
+existing stock module loads when Droidloom starts. Loading affects the host
+kernel and needs administrator approval. `--check` never loads modules.
 
 | Option | Purpose |
 | --- | --- |
@@ -88,6 +93,8 @@ journalctl -u droidloomd.service -n 100 --no-pager
 
 - **Missing tools/libraries:** prepare the requirements above or use a build sysroot.
 - **Hash/version mismatch:** use the supported release; do not bypass the guard.
+- **Binderfs “No such device”:** see the [Binder startup checks and cautions](fixes.md#binderfs-startup-after-reboot).
+  Do not replace the kernel or bypass module/security policies to make a check pass.
 - **Conflicting override:** inspect the named file rather than deleting other settings.
 - **Interrupted installation:** review the reported changes. Activation is not an
   all-or-nothing transaction; see [rollback](fixes.md#rollback). Remove a stale

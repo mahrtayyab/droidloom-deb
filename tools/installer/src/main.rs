@@ -1,5 +1,7 @@
 //! Explicitly scoped installer; never run this driver as root.
 
+mod binder;
+
 use serde_json::{json, Value};
 use std::env;
 use std::ffi::OsString;
@@ -305,6 +307,7 @@ fn environment_path(text: &str) -> Option<&str> {
 struct Plan {
     install_runtime: bool,
     setup: bool,
+    binder: binder::Action,
     kernel: bool,
     unshare: bool,
     titlebar: bool,
@@ -312,7 +315,12 @@ struct Plan {
 
 impl Plan {
     fn changed(&self) -> bool {
-        self.install_runtime || self.setup || self.kernel || self.unshare || self.titlebar
+        self.install_runtime
+            || self.setup
+            || self.binder.needs_install()
+            || self.kernel
+            || self.unshare
+            || self.titlebar
     }
 }
 
@@ -422,6 +430,7 @@ impl Installer {
                 return Err(format!("cell.json is missing but {} exists. Review existing storage manually; no adoption/deletion is attempted.", data.display()));
             }
         }
+        let binder = binder::preflight(&self.root, !install_runtime)?;
         let kernel = if setup { true } else { self.kernel_needed()? };
         let unshare = self.unshare_needed(install_runtime)?;
         let titlebar = self.titlebar_needed()?;
@@ -471,6 +480,7 @@ impl Installer {
         Ok(Plan {
             install_runtime,
             setup,
+            binder,
             kernel,
             unshare,
             titlebar,
@@ -687,6 +697,10 @@ impl Installer {
                 plan.setup,
             ),
             (
+                "Ensure the stock Binder module is loaded before Droidloom starts",
+                plan.binder.needs_install(),
+            ),
+            (
                 "Build/install private unshare 2.42 and its Droidloom-only PATH override",
                 plan.unshare,
             ),
@@ -707,6 +721,9 @@ impl Installer {
         if plan.changed() {
             println!("  Only Droidloom will be stopped during activation.");
             println!("  No host-library replacements, global sysctl/AppArmor changes, or Android-data resets.");
+            if plan.binder.needs_install() {
+                println!("  The Binder precheck loads a stock module into the host kernel on Droidloom startup; --no-start does not load it.");
+            }
             if plan.install_runtime {
                 println!("  apt will install the supplied package and its required dependencies, with its own confirmation.");
             }
@@ -769,12 +786,14 @@ impl Installer {
         if (
             fresh.install_runtime,
             fresh.setup,
+            fresh.binder,
             fresh.kernel,
             fresh.unshare,
             fresh.titlebar,
         ) != (
             plan.install_runtime,
             plan.setup,
+            plan.binder,
             plan.kernel,
             plan.unshare,
             plan.titlebar,
@@ -817,6 +836,9 @@ impl Installer {
                 .arg(state_home))?;
             run(Command::new("/usr/bin/droidloomctl").arg("stop"))?;
             self.kernel_needed()?;
+        }
+        if plan.binder.needs_install() {
+            binder::install(&self.root)?;
         }
         if let Some(unshare) = unshare {
             root_install(&unshare, Path::new(PRIVATE_UNSHARE), "755")?;
@@ -1240,12 +1262,16 @@ mod tests {
         let mut plan = Plan {
             install_runtime: false,
             setup: false,
+            binder: binder::Action::Ready,
             kernel: false,
             unshare: false,
             titlebar: false,
         };
         assert!(!plan.changed());
         plan.kernel = true;
+        assert!(plan.changed());
+        plan.kernel = false;
+        plan.binder = binder::Action::Install;
         assert!(plan.changed());
     }
     #[test]
@@ -1309,6 +1335,7 @@ mod tests {
         let plan = Plan {
             install_runtime: true,
             setup: true,
+            binder: binder::Action::Install,
             kernel: true,
             unshare: true,
             titlebar: true,
@@ -1318,6 +1345,7 @@ mod tests {
         let noop = Plan {
             install_runtime: false,
             setup: false,
+            binder: binder::Action::Ready,
             kernel: false,
             unshare: false,
             titlebar: false,

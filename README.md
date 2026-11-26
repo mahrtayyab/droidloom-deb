@@ -27,6 +27,7 @@ If the matching runtime is already installed, use `./install.sh` without
 
 ## What it fixes
 
+- Binderfs startup failures after reboot, with a stock-module precheck.
 - Android's missing-kernel-config boot crash.
 - Missing GNOME Wayland title bars and window controls.
 - Namespace-tool compatibility, using a private `unshare` when required.

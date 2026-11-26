@@ -28,6 +28,8 @@ files, but --check does not use sudo, install packages, fetch upstream sources,
 change configuration, or stop/start services.
 
 See docs/install.md for prerequisites, the full walkthrough, and rollback.
+Binder checks do not load drivers. Approved installation adds a Droidloom-only
+startup precheck for the stock module when needed; loading affects the host kernel.
 HELP
     exit 0 ;;
 esac

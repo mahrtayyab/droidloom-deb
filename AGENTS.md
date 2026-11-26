@@ -11,6 +11,9 @@
   checkout. Never stage or discard work in someone else's upstream checkout.
 - Documentation and development do not authorize installation, service restarts,
   package-manager changes, clearing Android data, or publishing to a remote.
+- Binder preflight/tests must not load or unload drivers. Keep loading in the
+  approved Droidloom service precheck; never automatically relax module/security
+  policy or install a replacement kernel driver.
 - Keep packages, Android images/data, APKs, caches, credentials, and personal
   configuration out of Git. Preserve upstream license notices.
 - A rootless binary-repack recipe exists; a complete Debian port/source-build
